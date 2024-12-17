@@ -492,7 +492,10 @@ if(!empty($exam->email_output)) $output = $email_output; // here maybe replace o
 if(strstr($output, '%%ADMIN-URL%%')) $output = str_replace('%%ADMIN-URL%%', admin_url("admin.php?page=watupro_takings&exam_id=".$exam->ID."&taking_id=".$taking_id), $output);
 $exam->user_name = $user_name; // to use for email subject in email_results
 $email_certificate_id = empty($certificate) ? 0 : $certificate_id;
-$_watu->email_results($exam, $output, @$grade_obj->ID, $email_certificate_id, $taking_id);
+if (isset($_POST['send_email'])) {
+  $_watu->email_results($exam, $output, @$grade_obj->ID, $email_certificate_id, $taking_id);
+}
+
 if(!empty($exam->no_ajax) and !empty($do_redirect)) watupro_redirect($do_redirect);
 
 // send this action regardless if we store taking. Will be used by MoolaMojo and perhaps other plugins

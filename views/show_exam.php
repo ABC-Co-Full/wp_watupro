@@ -106,6 +106,7 @@ if(!empty($text_captcha_html)) echo $text_captcha_html;?><br />
 	  	<div><input type="button" name="action" class="watupro-save-button" onclick="WatuPRO.saveResult(event)" id="save-button" value="<?php _e('Save', 'watupro') ?>" /></div>
 	  <?php endif;?>
 		<div><?php if(empty($exam->no_ajax)):?><input type="button" name="action" class="watupro-submit-button" onclick="WatuPRO.submitResult(event)" id="action-button" value="<?php echo empty($advanced_settings['submit_button_value']) ? _wtpt(__('View Results', 'watupro')) : $advanced_settings['submit_button_value']; ?>" <?php echo $submit_button_style?> />
+      <input type="button" class="watupro-send-email-button" id="action-email-button" onclick="WatuPRO.sendResult(event)" value="Send Email" <?php echo $submit_button_style?> />
 		<?php else:?>
 			<input type="submit" name="submit_no_ajax" id="action-button" class="watupro-submit-button" value="<?php echo empty($advanced_settings['submit_button_value']) ? _wtpt(__('View Results', 'watupro')) : $advanced_settings['submit_button_value']; ?>" <?php echo $submit_button_style?>/>
 		<?php endif;?></div>
