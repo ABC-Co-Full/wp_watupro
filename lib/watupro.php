@@ -216,6 +216,7 @@ class WatuPRO {
 			if(empty($exam->user_name)) $exam->user_name = '';
 					
 			$admin_output = $output = WatuPRO::cleanup($output);		
+  
 			if(strstr($output, "{{{split}}}")) {
 				$parts = explode("{{{split}}}", $output);
 				$output = trim($parts[0]);
@@ -1113,8 +1114,8 @@ class WatuPRO {
 		// if media is email remove any column styles
 		if($media == 'email') {
 			$output = str_replace(array('watupro-2-columns ', 'watupro-3-columns ', 'watupro-4-columns ', 'watupro-5-columns '), '', $output);
-		}		
-		
+		}
+    
 		$output = str_replace('><!--WATUEMAILanswerWATUEMAIL--','',$output);
 		$output = str_replace('><!--WATUEMAILanswer user-answer correct-answerWATUEMAIL--', $correct_style, $output);
 		$output = str_replace('><!--WATUEMAILanswer correct-answerWATUEMAIL--',$correct_style, $output);

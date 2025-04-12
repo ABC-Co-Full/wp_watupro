@@ -131,7 +131,7 @@ foreach ($all_question as $qct => $ques) {
             $current_text .= '</div><!--close watupro-rcwrapper-->';
             $question_catids_closed[] = $ques->cat_id;
         }
-            
+      
   		if(empty($ques->exclude_on_final_screen)) {
   			$result .= $current_text;
   			$short_answers .= $short_text;

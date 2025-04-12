@@ -1033,199 +1033,220 @@ class WTPQuestion {
     		$question_content = $parts[1];
     	} 
 			    	
-		$original_answer = ""; // this var is used only for textareas    	
-		$answer_text = ""; // answers as text
-		$is_answered = true; // let's default to answered and then set to false if adding "question was not answered" text
-		$unresolved_text = "";
+      $original_answer = ""; // this var is used only for textareas    	
+      $answer_text = ""; // answers as text
+      $is_answered = true; // let's default to answered and then set to false if adding "question was not answered" text
+      $unresolved_text = "";
+      
+      $compact_class = '';  
+
+      if($ques->compact_format == 1) $compact_class = " watupro-compact";
+
+      if($ques->compact_format == 3) $compact_class = " watupro-compact watupro-compact2";
 		
-		$compact_class = '';  
-	   if($ques->compact_format == 1) $compact_class = " watupro-compact";
-	   if($ques->compact_format == 3) $compact_class = " watupro-compact watupro-compact2";
+      $flagged_for_review = self :: flagged_for_review($ques, $qct);
+      $question_number = empty(self :: $advanced_settings['dont_display_question_numbers']) ? "<span class='watupro_num'>$qct. ".$flagged_for_review."</span>"  : $flagged_for_review;
+      $rtl_class = empty(self :: $advanced_settings['is_rtl']) ? '' : 'watupro-rtl';
+      
+      $enumerator = self :: define_enumerator();
 		
-		$flagged_for_review = self :: flagged_for_review($ques, $qct);
-		$question_number = empty(self :: $advanced_settings['dont_display_question_numbers']) ? "<span class='watupro_num'>$qct. ".$flagged_for_review."</span>"  : $flagged_for_review;
-		$rtl_class = empty(self :: $advanced_settings['is_rtl']) ? '' : 'watupro-rtl';
-		
-		$enumerator = self :: define_enumerator();
-		
-		$wrap_columns_class = empty($ques->compact_format) ? 'watupro-choices-columns' : '';
+		  $wrap_columns_class = empty($ques->compact_format) ? 'watupro-choices-columns' : '';
       $div_columns_class = ($ques->num_columns > 1 and empty($ques->compact_format)) ? 'watupro-' . $ques->num_columns.'-columns ' : '';  
 		
-		if($ques->answer_type == 'gaps') {			
-			// gaps are displayed in different way to avoid repeating the question
-			$current_text = "<div class='$wrap_columns_class show-question [[watupro-resolvedclass]]'><!--watupro-question-content--><div class='show-question-content'>" . $question_number;
-			$short_text = $current_text;
-		}	
-    	else {
-			$include_choices = true; // this is the default behavior. But on checkbox questions with group and flashcards $include choices will be false    		
-    		    		
-   		if($ques->answer_type=='checkbox' and $ques->allow_checkbox_groups and strstr($ques->question, '{{{group-')) {
-    		   // parse checkbox groups inside question contents
-    		   $question_content = WatuPROQuestionEnhanced :: process_groups($ques, $this, $ansArr, $enumerator);
-    		   // echo count($ques->q_answers);
-    		   $include_choices = false;
+      if($ques->answer_type == 'gaps') {
+        // gaps are displayed in different way to avoid repeating the question
+        $current_text = "<div class='$wrap_columns_class show-question [[watupro-resolvedclass]]'><div class='show-question-content'>" . $question_number;
+        $short_text = $current_text;
+
+      }	else {
+        $include_choices = true; // this is the default behavior. But on checkbox questions with group and flashcards $include choices will be false    		
+
+        if($ques->answer_type=='checkbox' and $ques->allow_checkbox_groups and strstr($ques->question, '{{{group-')) {
+          // parse checkbox groups inside question contents
+          $question_content = WatuPROQuestionEnhanced :: process_groups($ques, $this, $ansArr, $enumerator);
+          // echo count($ques->q_answers);
+          $include_choices = false;
     		}
     		
-    		$current_text = "<div class='$wrap_columns_class show-question $rtl_class [[watupro-resolvedclass]][[watupro-unanswered]]".$compact_class."'><!--watupro-question-content--><div class='show-question-content'>"
-	    		.$question_number . stripslashes($question_content) . "</div>\n<!--end-watupro-question-content-->";
+    		$current_text = "<div class='$wrap_columns_class show-question $rtl_class [[watupro-resolvedclass]][[watupro-unanswered]]".$compact_class."'><div class='show-question-content' style='font-style:italic; font-weight: 700'><b>".'"'.$question_number . stripslashes($question_content) . '"'."</b></div>";
 	    	$short_text = $current_text;	// this needs to handle also checkbox groups better, NYI	
 	    	
 	    	if(!empty($include_choices)) {
-	    	   $current_text .= "<!--watupro-question-choices--><div class='show-question-choices $rtl_class'>";
-	    	   
-	    	   /// sortable?
-	    	   if($ques->answer_type == 'sort') {
-	    	   	$horizontal_style = ($ques->compact_format == 2) ? 'watupro-sortable-horizontal' : '';
-					$current_text  .= "<ul class='watupro-sortable ".$horizontal_style."'>";	    	   
-	    	   }
-				else $current_text .= "<ul>";
-		   }
-		}			        
-		
-		// replace the {{{ID}}} mask
-		// replace {{{ID}}} if any
-		$ques->question = str_replace('{{{ID}}}', $ques->ID, $ques->question);	
-		$current_text = str_replace('{{{ID}}}', $ques->ID, $current_text);
-		$short_text = str_replace('{{{ID}}}', $ques->ID, $short_text);
-		
-	   $class = 'answer';
-	   $any_answers=false; // this is for textareas -is there any answer provided at all?
-		
-	   foreach ($ques->q_answers as $ans) {	   	
-	   	// sometimes sortable (and other types?) of questions may have old answers remained when changed question type
-	   	// maybe we should think about removing them when saving the question? For now this works
-	   	if($ques->answer_type == 'sort') break;
-	   	 
-	      if(empty($include_choices)) continue;
-	   	if($ques->answer_type == 'matrix' or $ques->answer_type == 'nmatrix' or $ques->answer_type == 'slider') continue;
-	  		$user_answer_class = ($ques->is_survey or !empty($_watu->this_quiz->is_personality_quiz)) ? 'user-answer-unrevealed' : 'user-answer';
-			$class = $div_columns_class . 'answer';			
-			if( in_array($ans->ID , $ansArr) ) { $class .= ' '.$user_answer_class; }
-			if($ans->correct == 1 and $ques->answer_type!='textarea' and !$ques->is_survey and empty($_watu->this_quiz->is_personality_quiz)) $class .= ' correct-answer';
-			$is_open_end = ($ques->answer_type == 'textarea') ? true : false;
-			
-			$sr_text = watupro_screen_reader_text($class, $is_open_end);
-			
-			if($enumerator) { 
-     			$enumerator_visible = $enumerator.'. ';
-     			$enumerator++;
-     		} else $enumerator_visible = '';
-            
-        if($ques->answer_type == 'textarea'):
-             // textarea answers have only 1 element. Make comparison case insensitive
-				 $original_answer=@$ansArr[0];
-				 $ansArr[0]=strtolower(strip_tags(trim($ansArr[0])));
-             $compare=strtolower($ans->answer);
-             if(!empty($compare)): $any_answers=true; endif;
-        else:
-             $compare = $ans->ID;
+          $current_text .= "<!--watupro-question-choices--><div class='show-question-choices $rtl_class'>";
 
-				 // alter answer with freetext answer if needed				 
-				 if( ($ques->answer_type == 'checkbox' or $ques->answer_type == 'radio') and $ans->accept_freetext and !empty($_POST['freetext_'.$ans->ID])) $ans->answer .= ' '.stripslashes($_POST['freetext_'.$ans->ID]);             
-             
-             if($ques->answer_type == 'checkbox' and $ques->is_flashcard) $current_text .= WatuPROFlashcard :: process($class, $ans, $compare, $sr_text);
-             else $current_text .= "<li class='$class'><span class='answer'><!--WATUEMAIL".$class."WATUEMAIL-->" . stripslashes($enumerator_visible.$ans->answer) . "</span>$sr_text</li>\n";
-        endif;    
-		} // end foreach choice;
+          /// sortable?
+          if($ques->answer_type == 'sort') {
+            $horizontal_style = ($ques->compact_format == 2) ? 'watupro-sortable-horizontal' : '';
+            $current_text  .= "<ul class='watupro-sortable ".$horizontal_style."' style='list-style:none;padding-left: 0;'>";	    	   
+
+          } else $current_text .= "<ul style='list-style:none;padding-left: 0;'>";
+		    }
+		  }
+      
+      // replace the {{{ID}}} mask
+      // replace {{{ID}}} if any
+      $ques->question = str_replace('{{{ID}}}', $ques->ID, $ques->question);	
+      $current_text = str_replace('{{{ID}}}', $ques->ID, $current_text);
+      $short_text = str_replace('{{{ID}}}', $ques->ID, $short_text);
 		
-     // open end will be displayed here
-     if($ques->answer_type=='textarea') {
-     		 $user_answer_class = $ques->is_survey ? 'user-answer-unrevealed' : 'user-answer';
-			
-			 // repeat this line in case there were no answers to compare	
-			 $answer_text = empty($original_answer) ? $ansArr[0] : $original_answer;
-			 $ansArr[0] = strtolower($ansArr[0]);
-			 
-          $class .= ' '. $user_answer_class;
-          if($correct) $class .= ' correct-answer';
-          $sr_text = watupro_screen_reader_text($class, true);
-          $current_text .= "<li class='$class'><span class='answer'>" . nl2br(stripslashes($answer_text)) . "</span>$sr_text</li>\n";
+      $class = 'answer';
+      $any_answers=false; // this is for textareas -is there any answer provided at all?
+		
+      foreach ($ques->q_answers as $ans) {
+        // sometimes sortable (and other types?) of questions may have old answers remained when changed question type
+        // maybe we should think about removing them when saving the question? For now this works
+        if($ques->answer_type == 'sort') break;
+        
+        if(empty($include_choices)) continue;
+
+        if($ques->answer_type == 'matrix' or $ques->answer_type == 'nmatrix' or $ques->answer_type == 'slider') continue;
+
+        $user_answer_class = ($ques->is_survey or !empty($_watu->this_quiz->is_personality_quiz)) ? 'user-answer-unrevealed' : 'user-answer';
+        $class = $div_columns_class . 'answer';
+
+        if( in_array($ans->ID , $ansArr) ) { 
+          $class .= ' '.$user_answer_class; 
+        } else {
+          // if wrong answer, don't add
+          continue;
+        }
+
+        if($ans->correct == 1 and $ques->answer_type!='textarea' and !$ques->is_survey and empty($_watu->this_quiz->is_personality_quiz)) $class .= ' correct-answer';
+        $is_open_end = ($ques->answer_type == 'textarea') ? true : false;
+        
+        $sr_text = watupro_screen_reader_text($class, $is_open_end);
+        
+        if($enumerator) { 
+          $enumerator_visible = $enumerator.'. ';
+          $enumerator++;
+
+        } else $enumerator_visible = '';
+              
+        if($ques->answer_type == 'textarea'):
+          // textarea answers have only 1 element. Make comparison case insensitive
+          $original_answer=@$ansArr[0];
+          $ansArr[0]=strtolower(strip_tags(trim($ansArr[0])));
+          $compare=strtolower($ans->answer);
+
+          if(!empty($compare)): $any_answers=true; endif;
+        else:
+          $compare = $ans->ID;
+
+          // alter answer with freetext answer if needed				 
+          if( ($ques->answer_type == 'checkbox' or $ques->answer_type == 'radio') and $ans->accept_freetext and !empty($_POST['freetext_'.$ans->ID])) $ans->answer .= ' '.stripslashes($_POST['freetext_'.$ans->ID]);
+
+          if($ques->answer_type == 'checkbox' and $ques->is_flashcard) $current_text .= WatuPROFlashcard :: process($class, $ans, $compare, $sr_text);
+          else $current_text .= "<li><span class='answer'>" . 'Your Answer: <b>'.stripslashes($enumerator_visible.$ans->answer) . "</b></span>$sr_text</li>";
+        
+        endif;
+      } // end foreach choice;
+      
+      $current_text = "<div style='padding: 20px; padding-bottom: 5px; margin: 0; background-image: linear-gradient(90deg,#fdd6e3 0%,#fde8c6 100%);'>" . $current_text."</div>";
+
+      // open end will be displayed here
+      if($ques->answer_type=='textarea') {
+        $user_answer_class = $ques->is_survey ? 'user-answer-unrevealed' : 'user-answer';
+
+        // repeat this line in case there were no answers to compare	
+        $answer_text = empty($original_answer) ? $ansArr[0] : $original_answer;
+        $ansArr[0] = strtolower($ansArr[0]);
+        
+        $class .= ' '. $user_answer_class;
+
+        if($correct) $class .= ' correct-answer';
+
+        $sr_text = watupro_screen_reader_text($class, true);
+        $current_text .= "<li><span class='answer'>" . nl2br(stripslashes($answer_text)) . "</span>$sr_text</li>";
           
-          // uploaded file?
-          if(!empty($_FILES['file-answer-'.$ques->ID]['tmp_name'])) $current_text .= '<!--watupro-uploaded-file-'.$ques->ID.'-->';
-     }
-     
-     if(($ques->answer_type=='gaps' or $ques->answer_type=='sort' 
-     		or $ques->answer_type=='matrix' or $ques->answer_type=='nmatrix' or $ques->answer_type == 'slider') and watupro_intel()) {
-     		list($points, $answer_text) = WatuPROIQuestion::process($ques, $ansArr);
-     		$current_text .= $answer_text;
-     }
+        // uploaded file?
+        if(!empty($_FILES['file-answer-'.$ques->ID]['tmp_name'])) $current_text .= '<!--watupro-uploaded-file-'.$ques->ID.'-->';
+      }
+      
+      if(($ques->answer_type=='gaps' or $ques->answer_type=='sort' or $ques->answer_type=='matrix' or $ques->answer_type=='nmatrix' or $ques->answer_type == 'slider') and watupro_intel()) {
+        list($points, $answer_text) = WatuPROIQuestion::process($ques, $ansArr);
+        $current_text .= $answer_text;
+      }
+      
+      if(empty($answer_text)) $answer_text = $_watu->answer_text($ques->q_answers, $ansArr);
+
+      if($ques->answer_type != 'gaps' and !empty($include_choices)) $current_text .= "</ul>"; // close the ul for answers
+
+      if(empty($_POST["answer-" . $ques->ID])) {
+        $is_answered = false;
+        $current_text .= "<p class='unanswered watupro-unanswered'>" . __('Question was not answered', 'watupro') . "</p>";
+        
+        $current_text = str_replace('[[watupro-unanswered]]',' watupro-unanswered-question ', $current_text);
+        $short_text = str_replace('[[watupro-unanswered]]',' watupro-unanswered-question ', $short_text);
+
+      } else {
+        $current_text = str_replace('[[watupro-unanswered]]','', $current_text); // replace unanswered mask with nothing
+        $short_text = str_replace('[[watupro-unanswered]]','', $short_text); // replace unanswered mask with nothing
+      }
+        
+      if(!$correct) $unresolved_text = $this->display_unresolved($current_text)."</div>";
+
+      // close question-choices
+      // do for all questions except checkbox with groups
+      if(!empty($include_choices)) {
+        $current_text .= "</div><!--end-watupro-question-choices-->";  
+        if(!$correct) $unresolved_text .= "</div>";
+      }
+      
+      // if there is user's feedback, display it too
+      if($ques->accept_feedback and !empty($_POST['feedback-'.$ques->ID])) {
+        $current_text .= "<p><b>".stripslashes($ques->feedback_label)."</b><br>".htmlspecialchars(stripslashes($_POST['feedback-'.$ques->ID]))."</p>";
+        $short_text .= "<p><b>".stripslashes($ques->feedback_label)."</b><br>".htmlspecialchars(stripslashes($_POST['feedback-'.$ques->ID]))."</p>";
+      }
     
-     if(empty($answer_text)) $answer_text = $_watu->answer_text($ques->q_answers, $ansArr);
-  		             
-  		if($ques->answer_type != 'gaps' and !empty($include_choices)) $current_text .= "</ul>"; // close the ul for answers
-  		if(empty($_POST["answer-" . $ques->ID])) {
-  			$is_answered = false;
-  			$current_text .= "<p class='unanswered watupro-unanswered'>" . __('Question was not answered', 'watupro') . "</p>";
-  			
-  			$current_text = str_replace('[[watupro-unanswered]]',' watupro-unanswered-question ', $current_text);
-  			$short_text = str_replace('[[watupro-unanswered]]',' watupro-unanswered-question ', $short_text);
-  		}
-  		else {
-  			$current_text = str_replace('[[watupro-unanswered]]','', $current_text); // replace unanswered mask with nothing
-  			$short_text = str_replace('[[watupro-unanswered]]','', $short_text); // replace unanswered mask with nothing
-  		}
-  		
-  		if(!$correct) $unresolved_text = $this->display_unresolved($current_text)."</div>";
-  
-		// close question-choices
-		// do for all questions except checkbox with groups
-		if(!empty($include_choices)) {
-		  $current_text .= "</div><!--end-watupro-question-choices-->";  
-		  if(!$correct) $unresolved_text .= "</div>";
-		}
-		
-		// if there is user's feedback, display it too
-		if($ques->accept_feedback and !empty($_POST['feedback-'.$ques->ID])) {
-			$current_text .= "<p><b>".stripslashes($ques->feedback_label)."</b><br>".htmlspecialchars(stripslashes($_POST['feedback-'.$ques->ID]))."</p>";
-			$short_text .= "<p><b>".stripslashes($ques->feedback_label)."</b><br>".htmlspecialchars(stripslashes($_POST['feedback-'.$ques->ID]))."</p>";
-		}
-  
-		// if explain_answer, display it	
-		$answer_feedback = $this->answer_feedback($ques, $correct, $ansArr, $points, $is_answered);	
-		$current_text .= $answer_feedback; 
-		if(!empty(self :: $advanced_settings['feedback_unresolved']) and !$correct) $unresolved_text .= $answer_feedback;
+      // if explain_answer, display it	
+      $answer_feedback = $this->answer_feedback($ques, $correct, $ansArr, $points, $is_answered);	
+      $current_text .= '</div>'.$answer_feedback; 
+
+      if(!empty(self :: $advanced_settings['feedback_unresolved']) and !$correct) $unresolved_text .= $answer_feedback;
+      
+      $current_text .= "</div>";
+      $short_text .= "<div class='show-question-choices'>{{{answerto-".$ques->ID."}}}</div></div>";
+      //echo "TESTEC: ".wpautop($current_text);
+      $current_text = wpautop($current_text);  		
+      $short_text = wpautop($short_text);
+      
+      // apply filter to allow 3rd party changes.
+      $current_text = apply_filters( 'watu_filter_current_question_text', $current_text, $qct, $question_content, $correct );
     
-  		$current_text .= "</div>";
-  		$short_text .= "<div class='show-question-choices'>{{{answerto-".$ques->ID."}}}</div>\n</div>";
-  		//echo "TESTEC: ".wpautop($current_text);
-  		$current_text = wpautop($current_text);  		
-  		$short_text = wpautop($short_text);
-  		
-  		// apply filter to allow 3rd party changes.
-  		$current_text = apply_filters( 'watu_filter_current_question_text', $current_text, $qct, $question_content, $correct );
-  		
-  		// remove checkmarks if so is selected
-		if(!empty(self :: $advanced_settings['no_checkmarks']) or (!empty(self :: $advanced_settings['no_checkmarks_unresolved']) and !$correct) ) {
-			$current_text = $this->display_unresolved($current_text);
-		}	
-  		
-  		// if question is survey, unresolved should be empty
-  		if($ques->is_survey) $unresolved_text = '';
-  		
-  		// clear any content that should not be shown - marked with the <!--watupro-hide-start--><!--watupro-hide-end--> comment
-  		$start_comment = '<!--watupro-hide-start-->';
-		$end_comment = '<!--watupro-hide-end-->'; 
-		$current_text  = preg_replace('#('.preg_quote($start_comment).')(.*)('.preg_quote($end_comment).')#siU', '', $current_text );
-		$unresolved_text  = preg_replace('#('.preg_quote($start_comment).')(.*)('.preg_quote($end_comment).')#siU', '', $unresolved_text );
-		$short_text  = preg_replace('#('.preg_quote($start_comment).')(.*)('.preg_quote($end_comment).')#siU', '', $short_text );
-  		
-  		return array($answer_text, $current_text, $unresolved_text, $short_text, $answer_feedback); 
+      // remove checkmarks if so is selected
+      if(!empty(self :: $advanced_settings['no_checkmarks']) or (!empty(self :: $advanced_settings['no_checkmarks_unresolved']) and !$correct) ) {
+        $current_text = $this->display_unresolved($current_text);
+      }	
+        
+      // if question is survey, unresolved should be empty
+      if($ques->is_survey) $unresolved_text = '';
+      
+      // clear any content that should not be shown - marked with the <!--watupro-hide-start--><!--watupro-hide-end--> comment
+      $start_comment = '<!--watupro-hide-start-->';
+      $end_comment = '<!--watupro-hide-end-->'; 
+      $current_text  = preg_replace('#('.preg_quote($start_comment).')(.*)('.preg_quote($end_comment).')#siU', '', $current_text );
+      $unresolved_text  = preg_replace('#('.preg_quote($start_comment).')(.*)('.preg_quote($end_comment).')#siU', '', $unresolved_text );
+      $short_text  = preg_replace('#('.preg_quote($start_comment).')(.*)('.preg_quote($end_comment).')#siU', '', $short_text );
+      
+      return array($answer_text, $current_text, $unresolved_text, $short_text, $answer_feedback); 
     } // end process()
     
     // displays the optional answerfeedback
     function answer_feedback($question, $is_correct, $ansArr, $points, $is_answered = true) {    	
-		// don't display feedback if the question was not answered?
-		if(!$is_answered and !empty($question->dont_explain_unanswered)) return "";    
+      // don't display feedback if the question was not answered?
+      if(!$is_answered and !empty($question->dont_explain_unanswered)) return "";    
     	//echo "HERE";
     	$feedback = "";
     	$feedback_contents = stripslashes($question->explain_answer);
-		if(empty($feedback_contents)) return "";
-		$toggle_feedback = empty(self :: $advanced_settings['toggle_answer_explanations']) ? 0 : 1;
-		if($toggle_feedback) $toggle_feedback_button = stripslashes(rawurldecode(self :: $advanced_settings['toggle_answer_explanations_button']));
+
+		  if(empty($feedback_contents)) return "";
+
+		  $toggle_feedback = empty(self :: $advanced_settings['toggle_answer_explanations']) ? 0 : 1;
+
+		  if($toggle_feedback) $toggle_feedback_button = stripslashes(rawurldecode(self :: $advanced_settings['toggle_answer_explanations_button']));
 		
-		// replace {{{ID}}} if any
-		$feedback_contents = str_replace('{{{ID}}}', $question->ID, $feedback_contents);	
+		  // replace {{{ID}}} if any
+		  $feedback_contents = str_replace('{{{ID}}}', $question->ID, $feedback_contents);	
 		
     	if(!empty($question->explain_answer)) {    		
     		if(!empty($question->elaborate_explanation)) {
@@ -1260,16 +1281,16 @@ class WTPQuestion {
     	}
     	
     	// discard points?
-		if($points > 0 and !$is_correct and $question->reward_only_correct) $points = 0; 
-		if($points and !$is_correct and $question->discard_even_negative) $points = 0;
-		if($points < 0 and $question->no_negative) $points = 0;
+      if($points > 0 and !$is_correct and $question->reward_only_correct) $points = 0; 
+      if($points and !$is_correct and $question->discard_even_negative) $points = 0;
+      if($points < 0 and $question->no_negative) $points = 0;
     	
     	if($question->round_points) $points = round($points, 1);		
     	$points = number_format($points, 2);
     	$points = $points + 0;
     	$feedback = str_replace("{{{points}}}", $points, $feedback);    
     	
-		// maximum points?
+		  // maximum points?
     	if(strstr($feedback, '{{{max-points}}}')) {
     		$max_points = self :: max_points($question);
     		$max_points = $max_points + 0;
@@ -1285,11 +1306,11 @@ class WTPQuestion {
     	
     	$feedback = wpautop($feedback);
 		
-		// toggle feedback?
-		if($toggle_feedback and !empty($feedback)) {
-			$feedback = '<p><input type="button" value="'.$toggle_feedback_button.'" onclick="jQuery('."'#feedback-{$question->ID}'".').toggle();"></p>
-			<div id="feedback-'.$question->ID.'" style="display:none;">' . $feedback . '</div>';
-		}    	
+      // toggle feedback?
+      if($toggle_feedback and !empty($feedback)) {
+        $feedback = '<p><input type="button" value="'.$toggle_feedback_button.'" onclick="jQuery('."'#feedback-{$question->ID}'".').toggle();"></p>
+        <div id="feedback-'.$question->ID.'" style="display:none;">' . $feedback . '</div>';
+      }    	
     	
     	return '<!--watupro-feedback-->'.$feedback.'<!--end-watupro-feedback-->';
     } // end feedback   
